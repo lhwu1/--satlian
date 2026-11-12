@@ -38,3 +38,5 @@ cargo build --release --manifest-path src-tauri/Cargo.toml
 - 建筑与地图编辑器。
 
 以上为规划内容，当前版本尚未实现。
+
+编辑器的素材复用、地图组装和实施计划见 [编辑器方案](docs/编辑器方案.md)；提供给 AI 的素材输出协议和示例见 [AI 素材生成指导](docs/AI素材生成指导.md)。
