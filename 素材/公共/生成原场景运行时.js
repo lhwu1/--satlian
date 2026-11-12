@@ -12,7 +12,12 @@ if(fs.existsSync(modulesFile)) for(const part of JSON.parse(fs.readFileSync(modu
   source=source.slice(0,start)+fs.readFileSync(path.resolve(__dirname,part.file),'utf8')+source.slice(end);
 }
 const needle = 'QC().catch(i=>bM(i&&i.stack||i));})();';
+// The game's cinematic postprocessing assumes its original depth/sky setup.
+// Editor/standalone observation use the same geometry and PBR materials directly.
+source=source.replace('t.render.frame(p)', 'n==="along"?(t.renderer.setRenderTarget(null),t.renderer.render(t.scene,t.camera)):t.render.frame(p)');
 if (source.split(needle).length !== 2) throw new Error('原场景入口发生变化，无法安全生成适配器');
+source=source.replace('let h=Qi(new rn(80,80).rotateX(-Math.PI/2),t.mats.get("concrete"),{cast:!1});if(t.scene.add(h),t.level=', 'let h=Qi(new rn(80,80).rotateX(-Math.PI/2),t.mats.get("concrete"),{cast:!1});if(n!=="along"&&t.scene.add(h),t.level=');
+source = source.replace('if(n){if(t.showcaseInfo.update)', 'for(const object of window.__alongEditorObjects?.values()||[])if(object.userData.alongUpdate)try{object.userData.alongUpdate(p)}catch(error){};if(n){if(t.showcaseInfo.update)');
 const adapter = `
 gM.along={showcase:async()=>({})};
 window.__alongOriginal={
@@ -94,5 +99,134 @@ window.__alongOriginal={
   },
   hudDemo(){const g=window.__G;g.hud=hM(g);g.hud.show(true);g.showcaseInfo.update=dt=>g.hud.update(dt);return {hud:g.hud,events:g.events,player:g.player,weapon:g.weapon};}
 };
+// Preview/editor bridge: keep all Three.js access inside the runtime frame. This
+// also works when both pages are opened from file://, where direct DOM access is blocked.
+window.__alongEditorObjects = new Map();
+function alongSyncPhysics(){
+  const g=window.__G,T=g.THREE;
+  for(const box of [...g.physics.boxes])if(box.tag==='along-editor')g.physics.removeBox(box);
+  for(const root of window.__alongEditorObjects.values()){
+    root.updateMatrixWorld(true);
+    for(const c of root.userData.alongColliders||[]){
+      const box=new T.Box3(new T.Vector3(...c.min),new T.Vector3(...c.max)).applyMatrix4(root.matrixWorld);
+      g.physics.addBox(box.min,box.max,{surface:c.surface||'concrete',tag:'along-editor',playerOnly:c.surface==='airwall'});
+    }
+  }
+  g.physics.build();
+}
+let alongPhysicsTimer;
+function alongQueuePhysics(){clearTimeout(alongPhysicsTimer);alongPhysicsTimer=setTimeout(alongSyncPhysics,80);}
+function alongReply(type, detail={}) { parent.postMessage({channel:'along-runtime', type, ...detail}, '*'); }
+async function alongHandleMessage(data) {
+  if (!data || data.channel !== 'along-preview' && data.channel !== 'along-editor') return;
+  if (!window.__ready || !window.__G || !window.__alongOriginal) return;
+  if (data.type === 'ping') { alongReply('ready'); return; }
+  try {
+    const T=window.__G.THREE, scene=window.__G.scene;
+    if (data.type === 'preview' || data.type === 'add' || data.type==='thumbnail') {
+      const factory=new Function('ctx',data.factory);
+      const object=await factory({THREE:T,original:window.__alongOriginal});
+      if (!object?.isObject3D) throw Error('素材工厂没有返回 Object3D');
+      if (data.type === 'preview' || data.type==='thumbnail') {
+        if(!window.__alongPreviewLighting){
+          window.__alongPreviewLighting=true;
+          scene.add(new T.HemisphereLight(0xd8efff,0xaaa18b,3.2));
+          window.__G.render.sun.color.setHex(0xfff4dd);window.__G.render.sun.intensity=3.8;window.__G.render.sun.position.set(-30,65,-25);
+          window.__G.renderer.toneMapping=T.ACESFilmicToneMapping;window.__G.renderer.toneMappingExposure=1.15;
+          if(window.__G.render.sky)window.__G.render.sky.visible=false;scene.background=new T.Color(0x253037);scene.fog=null;
+        }
+        if (window.__alongPreviewObject) scene.remove(window.__alongPreviewObject);
+        window.__alongPreviewObject=object;
+        if(object.userData.alongUpdate) window.__G.showcaseInfo.update=dt=>object.userData.alongUpdate(dt);
+        const bounds=object.userData.alongPreviewBounds;
+        const box=bounds?new T.Box3(new T.Vector3(...bounds.min),new T.Vector3(...bounds.max)):new T.Box3().setFromObject(object);
+        if(box.isEmpty()) throw Error('素材没有可见几何');
+        const size=box.getSize(new T.Vector3()),center=box.getCenter(new T.Vector3());
+        scene.add(object);
+        const distance=Math.max(size.x,size.y,size.z,1)*1.6;
+        window.__setShot({cam:[center.x+distance,center.y+distance*.65,center.z+distance,center.x,center.y,center.z].join(','),fov:45});
+        if(data.type==='thumbnail'){scene.background=new T.Color(0x253037);scene.fog=null;if(window.__G.render.sky)window.__G.render.sky.visible=false;await new Promise(resolve=>setTimeout(resolve,350));window.__G.render.renderer.render(scene,window.__G.camera);alongReply('thumbnail-ready',{id:data.id,url:window.__G.render.renderer.domElement.toDataURL('image/png')});}
+        alongReply('preview-ready',{id:data.id,size:[size.x,size.y,size.z]});
+      } else {
+        object.name=data.id||'asset';
+        object.position.set(...(data.transform?.position||[0,0,0]));
+        object.rotation.set(...(data.transform?.rotation||[0,0,0]));
+        object.scale.set(...(data.transform?.scale||[1,1,1]));
+        if(window.__alongEditorObjects.has(data.id))scene.remove(window.__alongEditorObjects.get(data.id));
+        scene.add(object);window.__alongEditorObjects.set(data.id,object);alongQueuePhysics();
+        if(data.materials)for(const [slot,material] of Object.entries(data.materials))object.traverse(o=>{if(o.isMesh&&(slot==='*'||o.userData.alongSlot===slot))o.material=window.__alongOriginal.material(material);});
+        alongReply('added',{id:data.id,size:object.userData.alongColliders?.length||0});
+      }
+      return;
+    }
+    if (data.type === 'editor-init') {
+      if(!window.__alongEditorReady){
+        /* No implicit foundation: the editor begins with no geometry.
+        const floor=new T.Mesh(new T.PlaneGeometry(80,80),window.__G.mats.get('concrete'));
+        floor.rotation.x=-Math.PI/2;floor.position.y=-.04;floor.name='editor-ground';scene.add(floor);
+        const grid=new T.GridHelper(80,80,0x657579,0x354347);grid.position.y=-.025;scene.add(grid); */
+        scene.background=new T.Color(0xa7d4ed);scene.fog=new T.FogExp2(0xa7d4ed,.0015);if(window.__G.render.sky)window.__G.render.sky.visible=false;
+        window.__G.render.sun.intensity=3.8;window.__G.render.sun.color.setHex(0xfff4dd);window.__G.render.sun.position.set(-30,65,-25);
+        const ambient=new T.HemisphereLight(0xd8efff,0xaaa18b,3.2);scene.add(ambient);
+        const renderer=window.__G.renderer;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
+        window.__G.render.post.wet=0;
+        window.__alongEditorReady=true;
+        window.__setShot({cam:'22,24,28,0,0,0',fov:48});
+      }
+      alongReply('editor-ready');return;
+    }
+    if(data.type==='select'){const object=window.__alongEditorObjects.get(data.id);if(!object)return;const slots=new Map();object.traverse(o=>{if(o.isMesh){if(!o.userData.alongSlot)o.userData.alongSlot=o.material?.name||'body';slots.set(o.userData.alongSlot,{id:o.userData.alongSlot,name:o.userData.alongSlot});}});alongReply('slots',{id:data.id,slots:object.userData.alongSlots||[...slots.values()]});return;}
+    if(data.type==='material'){const object=window.__alongEditorObjects.get(data.id);if(!object)throw Error('先选中对象');const material=window.__alongOriginal.material(data.material);object.traverse(o=>{if(o.isMesh&&(data.slot==='*'||o.userData.alongSlot===data.slot))o.material=material;});return;}
+    if(data.type==='transform'){
+
+      const o=window.__alongEditorObjects.get(data.id);if(!o)throw Error('找不到地图对象');
+      if(data.position)o.position.set(...data.position);if(data.rotation)o.rotation.set(...data.rotation);if(data.scale)o.scale.set(...data.scale);
+      alongQueuePhysics();alongReply('transformed',{id:data.id});return;
+    }
+    if(data.type==='remove'){
+      const o=window.__alongEditorObjects.get(data.id);if(o){scene.remove(o);window.__alongEditorObjects.delete(data.id);}
+      alongQueuePhysics();alongReply('removed',{id:data.id});return;
+    }
+    if(data.type==='clear-objects'){
+      for(const o of window.__alongEditorObjects.values())scene.remove(o);
+      window.__alongEditorObjects.clear();alongQueuePhysics();alongReply('cleared');return;
+    }
+    if(data.type==='colliders'){
+      for(const root of window.__alongEditorObjects.values()){
+        if(!root.userData.alongColliderVisuals){
+          root.userData.alongColliderVisuals=(root.userData.alongColliders||[]).map(c=>{
+            const min=new T.Vector3(...c.min),max=new T.Vector3(...c.max),size=max.clone().sub(min),center=max.clone().add(min).multiplyScalar(.5);
+            const mesh=new T.Mesh(new T.BoxGeometry(Math.max(.01,size.x),Math.max(.01,size.y),Math.max(.01,size.z)),new T.MeshBasicMaterial({color:0xffbd62,wireframe:true,depthTest:false}));mesh.position.copy(center);mesh.renderOrder=20;root.add(mesh);return mesh;
+          });
+        }
+        for(const mesh of root.userData.alongColliderVisuals)mesh.visible=!!data.visible;
+      }
+      return;
+    }
+    if(data.type==='camera'){
+      const [x,y,z]=data.position||[22,24,28], target=data.target||[0,0,0];
+      window.__setShot({cam:[x,y,z,...target].join(','),fov:data.fov||48});alongReply('camera-set');return;
+    }
+    if(data.type==='pick'){
+      const canvas=window.__G.render.renderer?.domElement,camera=window.__G.camera||window.__G.viewCamera;
+      if(!canvas||!camera)return;
+      const pointer=new T.Vector2(data.x*2-1,-data.y*2+1);
+      const raycaster=new T.Raycaster();raycaster.setFromCamera(pointer,camera);
+      const hits=raycaster.intersectObjects([...window.__alongEditorObjects.values()],true);
+      for(const hit of hits){let node=hit.object;while(node&&window.__alongEditorObjects.get(node.name)!==node)node=node.parent;if(node){alongReply('picked',{id:node.name});return;}}
+      alongReply('picked',{id:null});return;
+    }
+    if(data.type==='airwall'){
+      const root=new T.Group(),dims=data.size||[4,3,.2];
+      const mesh=new T.Mesh(new T.BoxGeometry(...dims),new T.MeshBasicMaterial({color:0x28b8a4,transparent:true,opacity:.22,depthWrite:false}));root.add(mesh);
+      mesh.visible=!window.__alongObserver;root.name=data.id;root.rotation.set(...(data.transform?.rotation||[0,0,0]));root.scale.set(...(data.transform?.scale||[1,1,1]));root.position.set(...(data.transform?.position||[0,dims[1]/2,0]));
+      root.userData.alongColliders=[{min:dims.map(v=>-v/2),max:dims.map(v=>v/2),surface:'airwall'}];
+      if(window.__alongEditorObjects.has(data.id))scene.remove(window.__alongEditorObjects.get(data.id));
+      scene.add(root);window.__alongEditorObjects.set(data.id,root);alongQueuePhysics();alongReply('added',{id:data.id});return;
+    }
+  } catch(error) { alongReply('error',{id:data.id,message:error?.message||String(error)}); }
+}
+window.addEventListener('message',event=>alongHandleMessage(event.data));
+window.addEventListener('load',()=>{const ping=()=>{if(window.__ready)alongReply('ready');};setInterval(ping,500);});
 `;
 fs.writeFileSync(path.join(__dirname, '原场景运行时.html'), source.replace(needle, adapter + needle));

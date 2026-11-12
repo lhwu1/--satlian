@@ -1,0 +1,32 @@
+const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {start}=require('../mcp-server.cjs');
+const root=path.resolve(__dirname,'../..'),out=path.join(__dirname,'output');fs.mkdirSync(out,{recursive:true});
+(async()=>{const port=18768,server=start(port);const base='http://127.0.0.1:'+port;
+const edge='C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';const browser=await chromium.launch({headless:true,...(fs.existsSync(edge)?{executablePath:edge}:{}),args:['--enable-unsafe-swiftshader','--allow-file-access-from-files']});
+try{
+const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.goto(base+'/编辑器/index.html');await page.waitForFunction(()=>window.alongEditor&&document.getElementById('sceneStatus').textContent.includes('就绪'),{timeout:120000});
+assert.equal(await page.evaluate(()=>window.alongEditor.snapshot().objects.length),0);
+assert.equal(await page.frames()[1].evaluate(()=>window.__G.scene.getObjectByName('editor-ground')),undefined);
+await page.click('#addFloor');await page.selectOption('#materialChoice','paint_red');await page.click('#applyMaterial');
+await page.waitForFunction(()=>window.alongEditor.snapshot().objects[0].materials['*']==='paint_red');
+await page.click('#encloseMap');assert.equal(await page.evaluate(()=>window.alongEditor.snapshot().objects.filter(o=>o.airwall).length),4);
+const project=JSON.parse(fs.readFileSync(path.join(root,'地图/晴日港区集装箱争夺.along-map.json'),'utf8'));
+await page.evaluate(p=>window.alongEditor.restore(p),project);
+await page.waitForFunction(()=>document.getElementById('scene').contentWindow.__alongEditorObjects.size===79);
+await page.waitForTimeout(1500);
+const physics=await page.frames()[1].evaluate(()=>window.__G.physics.boxes.filter(b=>b.surface==='airwall').length);assert.equal(physics,4);
+const blocking=await page.frames()[1].evaluate(()=>{const T=window.__G.THREE,w=window.__G.physics.boxes.filter(b=>b.surface==='airwall').find(b=>b.max.x-b.min.x<=1),pos=new T.Vector3(w.min.x-1,0,(w.min.z+w.max.z)/2),velocity=new T.Vector3(5,0,0);const result=window.__G.physics.moveCapsule(pos,velocity,1);return {blocked:pos.x<w.min.x,hit:result.hitWall,playerOnly:w.playerOnly};});assert.equal(blocking.blocked,true);assert.equal(blocking.hit,true);assert.equal(blocking.playerOnly,true);
+await page.screenshot({path:path.join(out,'port-editor.png')});
+await page.waitForFunction(()=>document.querySelectorAll('.asset-thumb img').length>=2,{timeout:120000});
+await page.click('#settingsButton');await page.fill('#mcpUrl',base);await page.click('#connectMcp');await page.waitForFunction(()=>document.getElementById('mcpStatus').textContent.includes('已连接'));await page.screenshot({path:path.join(out,'settings.png')});await page.click('#closeSettings');
+// Exercise actual browser export, not just the Node helper.
+const downloadPromise=page.waitForEvent('download');await page.click('#exportMap');const download=await downloadPromise;const file=path.join(out,'exported.html');await download.saveAs(file);
+const map=await browser.newPage({viewport:{width:1440,height:1000}});map.on('pageerror',e=>errors.push(e.message));await map.goto('file:///'+file.replaceAll('\\','/'));await map.waitForFunction(()=>document.getElementById('map').contentWindow.__alongEditorObjects?.size===79,{timeout:120000});await map.waitForTimeout(1800);await map.screenshot({path:path.join(out,'port-standalone.png')});
+assert.equal(await map.frames()[1].evaluate(()=>window.__G.physics.boxes.filter(b=>b.surface==='airwall').length),4);
+await map.click('#walls');await map.waitForTimeout(300);assert.ok(await map.frames()[1].evaluate(()=>[...window.__alongEditorObjects.values()].some(o=>o.userData.alongColliderVisuals?.some(m=>m.visible))));
+await page.evaluate(()=>window.alongEditor.restore({name:'人物检查',teams:{attackers:'进攻方',defenders:'防守方',objective:'检查'},objects:[{id:'soldier',name:'战术小队',kind:'actor',factory:window.ALONG_ASSETS.find(a=>a.id==='builtin.training-dummy').factory,position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]}]}));await page.evaluate(()=>window.alongEditor.send('camera',{position:[2.2,1.65,-3],target:[0,1,0],fov:38}));await page.waitForTimeout(2200);await page.screenshot({path:path.join(out,'soldier.png')});
+await page.selectOption('#materialSlot','helmet');await page.selectOption('#materialChoice','paint_green');await page.click('#applyMaterial');assert.equal(await page.evaluate(()=>window.alongEditor.snapshot().objects[0].materials.helmet),'paint_green');
+const weapon=await browser.newPage();weapon.on('pageerror',e=>errors.push(e.message));await weapon.goto(base+'/素材/AI生成/ai.thompson1928.html');await weapon.waitForFunction(()=>document.documentElement.dataset.assetState==='ready',{timeout:120000});await weapon.screenshot({path:path.join(out,'thompson.png')});
+assert.deepEqual(errors,[]);console.log('PASS: empty scene, foundation, closed bounds, 4 physics airwalls, material slots, real thumbnails, MCP settings, browser export/file://, tactical soldier, Thompson; no page errors.');
+}finally{await browser.close();server.close();}})().catch(e=>{console.error(e);process.exitCode=1});

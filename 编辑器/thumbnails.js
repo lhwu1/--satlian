@@ -1,0 +1,9 @@
+// Render the actual factory in a single reusable WebGL frame; no stock illustrations.
+(() => {
+  const queue=[],cache=new Map();let busy=null,ready=false,worker;
+  function run(){if(!ready||busy||!queue.length)return;busy=queue.shift();worker.contentWindow.postMessage({channel:'along-preview',type:'thumbnail',id:busy.asset.id,factory:busy.asset.factory},'*');busy.timer=setTimeout(()=>finish(null),25000);}
+  function finish(url){if(!busy)return;clearTimeout(busy.timer);if(url){cache.set(busy.asset.id,url);for(const el of busy.targets){const img=new Image();img.alt=busy.asset.name;img.src=url;el.replaceChildren(img);}}else for(const el of busy.targets)el.textContent='实物预览暂不可用';busy=null;run();}
+  window.queueAssetThumbnail=(asset,el)=>{if(!asset.factory){el.textContent='打开预览';return;}if(cache.has(asset.id)){const img=new Image();img.src=cache.get(asset.id);img.alt=asset.name;el.replaceChildren(img);return;}const pending=[busy,...queue].find(x=>x?.asset.id===asset.id);if(pending){pending.targets.push(el);return;}const observer=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)){observer.disconnect();queue.push({asset,targets:[el]});run();}});observer.observe(el);};
+  window.addEventListener('DOMContentLoaded',()=>{worker=document.createElement('iframe');worker.title='真实素材缩略图渲染器';worker.style.cssText='position:fixed;left:-1000px;top:0;width:256px;height:192px;visibility:hidden';worker.src='../素材/公共/原场景运行时.html?show=along&noaudio=1&tex=256&thumbnail=1';document.body.append(worker);});
+  window.addEventListener('message',e=>{if(e.source!==worker?.contentWindow||e.data?.channel!=='along-runtime')return;if(e.data.type==='ready'){ready=true;run();}if(e.data.type==='thumbnail-ready'&&e.data.id===busy?.asset.id)finish(e.data.url);if(e.data.type==='error')finish(null);});
+})();

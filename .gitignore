@@ -9,3 +9,8 @@
 练枪靶场/盐线练枪靶场.exe
 练枪靶场/盐线练枪靶场.spec
 *.pyc
+
+node_modules/
+编辑器/test-*.png
+编辑器/tests/output/
+.along-editor-events.json*
