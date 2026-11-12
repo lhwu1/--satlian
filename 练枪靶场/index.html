@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>沿线练枪靶场</title><link rel="stylesheet" href="style.css?v=20261112-fix-enter-4"><meta name="description" content="本地独立 FPS 灵敏度练习靶场"></head>
+<body>
+<div class="app initial">
+  <aside class="panel hidden"><div class="brand"><b>沿线</b><span>练枪靶场</span></div><div class="dpi-card" id="dpiCard">硬件基准 DPI <strong id="dpiValue">未确认</strong><p id="dpiSource">浏览器无法读取硬件 DPI，请先校准或手填确认。</p><button id="calibrate">校准 / 确认 DPI</button></div>
+    <label for="dpiRange">本窗口等效 DPI <output id="dpiRangeOut">未确认</output></label><div class="dpi-control"><input id="dpi" aria-label="窗口等效 DPI 数值" type="number" min="100" max="32000" step="1" placeholder="需校准"><input id="dpiRange" type="range" min="100" max="32000" step="1" value="800" aria-label="本窗口 DPI 滑条"></div><div id="dpiScale" class="dpi-scale" aria-label="DPI 高低灵敏度分区"><span>低敏</span><span>中敏</span><span>高敏</span></div><div class="dpi-ticks" aria-hidden="true"><span>100</span><span>400</span><span>800</span><span>1600</span><span>3200</span><span>6400</span><span>12800</span><span>32000</span></div><p class="hint">所有调节只改变这个训练窗口的视角输入，不修改鼠标硬件、驱动或 Windows 桌面指针速度。</p>
+    <label>训练场景</label><div class="map-name">仓库训练场</div>
+    <label>每批靶子 <output id="countOut">10</output></label><input id="count" type="range" min="10" max="10" value="10" disabled>
+    <label>靶子速度</label><select id="speed"><option value="slow">慢速</option><option value="normal" selected>标准</option><option value="fast">快速</option></select>
+    <label>当前灵敏度 <output id="sensOut">1.00</output></label><input id="sens" type="range" min="0.25" max="2.5" step="0.01" value="1">
+    <input id="sensNumber" type="number" min="0.25" max="2.5" step="0.01" value="1.00" aria-label="页面灵敏度数值"><p id="sensitivityChange" class="hint" role="status">页面灵敏度为额外倍率；AI 会在上方调整页面 DPI 并显示滑条移动与前后数值。</p>
+    <label>单轮时长（秒）</label><select id="round"><option value="30">30 秒</option><option value="45" selected>45 秒</option><option value="60">60 秒</option></select>
+    <p class="hint">AI 分析在本轮结束后开放，显示调整幅度和原因后应用于下一轮。</p>
+    <label class="switch"><input id="random" type="checkbox" checked> 随机固定靶（每批 10 个）</label>
+  <label class="switch"><input id="moving" type="checkbox"> 移动靶（无人机，逐架出现）</label>
+    <p id="targetModeHint" class="hint">两种靶型互斥，切换后需重新开始训练。</p>
+    <section><h3>准星设置</h3>
+      <label for="crossStyle">准星样式</label><select id="crossStyle"><option value="cross">十字</option><option value="dot">圆点</option><option value="ring">圆环</option><option value="cross-dot">十字加圆点</option></select>
+      <label for="crossSize">准星大小 <output id="crossSizeOut">20 px</output></label><input id="crossSize" type="range" min="6" max="48" value="20">
+      <label for="crossColor">准星颜色</label><input id="crossColor" type="color" value="#4dff88">
+    </section>
+    <label class="switch"><input id="recoil" type="checkbox"> 开启随机后坐力</label>
+    <label class="switch"><input id="infinite" type="checkbox" checked> 无限子弹</label>
+    <button id="start" class="primary">开始训练</button><button id="reset">重置靶子</button><button id="resetDpi">重置当前 DPI（需重新校准）</button>
+    <div class="stats"><div><small>命中率</small><strong id="accuracy">—</strong></div><div><small>平均命中间隔</small><strong id="reaction">—</strong></div><div><small>鼠标距离</small><strong id="distance">0 输入单位</strong></div></div>
+    <section><h3>灵敏度分析</h3><p id="advice">完成一局训练后，系统会根据你的鼠标轨迹给出建议。</p></section>
+    <section><h3>AI 优化记录</h3><p id="aiStatus" class="hint">本轮结束后可选择 AI 优化，也可保持原灵敏度继续。</p></section>
+    <p class="tip">点击场景控制视角。按 P 显示设置栏；按 Esc 显示退出确认。靶旁字母和距离提示可帮助定位。</p>
+  </aside>
+  <main class="stage boot"><iframe id="world" title="沿线完整场景" src="about:blank"></iframe><div id="welcome"><b>沿线 · 独立练枪场</b><button id="enter" class="primary">进入靶场</button></div><div id="loading"><b>正在加载仓库训练区</b><span></span><small>正在定位出生点与训练边界…</small></div><div class="range-boundary" aria-label="仓库训练区域"></div><div id="targets"></div><div id="movers"></div><div class="crosshair"></div><div class="banner" id="banner">按 P 显示设置栏</div><div class="hud"><span id="score">第 1 批 · 命中 0 / 0</span><span id="timer">00.0 s</span></div></main>
+</div>
+<section id="historyEntry" aria-label="训练记录入口"><button id="historyToggle" type="button">训练记录 <span id="historyCount">0</span></button></section>
+<dialog id="historyDialog" aria-labelledby="historyTitle"><h2 id="historyTitle">训练记录</h2><p>显示最近 30 条训练结果；点击记录可恢复当时的 DPI 和靶型并进入靶场。</p><ol id="historyList"></ol><p id="historyEmpty" class="hint" hidden>还没有训练记录，完成一局后会显示在这里。</p><button id="clearHistory" type="button">清空本地记录</button><button id="closeHistory" type="button">关闭</button></dialog>
+<button id="helpToggle" type="button" aria-label="按键帮助（Tab）" aria-expanded="false" aria-controls="keyHelp">?</button>
+<aside id="keyHelp" hidden aria-label="按键说明"><h3>操作帮助 <small>Tab 收起</small></h3><dl><dt>W / A / S / D</dt><dd>移动</dd><dt>鼠标移动</dt><dd>转动视角</dd><dt>鼠标左键</dt><dd>射击 / 捕获鼠标</dd><dt>P</dt><dd>显示或隐藏左侧设置，释放鼠标</dd><dt>Esc</dt><dd>暂停并显示退出确认</dd><dt>Tab / ?</dt><dd>展开或收起本说明</dd></dl><p>在左侧点击“开始训练”，倒计时后生成靶子。固定靶只在剩余 3 个时显示定位标识。</p></aside>
+<div id="entryHint" hidden aria-live="polite"><kbd>P</kbd><b>打开训练设置</b><span>点击场景控制视角 · Tab 查看操作帮助</span></div>
+<dialog id="exitDialog" aria-labelledby="exitTitle"><h2 id="exitTitle">退出靶场？</h2><p>训练已暂停，退出将结束本轮训练并返回入口。</p><button id="resumeRange" class="primary">继续训练</button><button id="leaveRange">退出靶场</button></dialog>
+<dialog id="calibrationDialog" aria-labelledby="calibrationTitle">
+  <h2 id="calibrationTitle">训练前 · 鼠标校准</h2><label id="calibrationBaselineLabel" for="calibrationCm">移动实际距离（厘米，用尺量）</label>
+  <p>在桌面上用尺子量出 1 英寸（2.54 cm）。授权后先将鼠标放在左端，按空格开始采集，水平移到右端后按 Enter。实际距离可自行改大，以减小测量误差。</p>
+  <input id="calibrationCm" type="number" min="2" max="100" step="0.01" value="2.54">
+  <button id="readMouseSettings">授权读取本机鼠标设置</button><p id="mouseSettingsStatus" class="hint">尚未读取系统设置。此功能需要本机后台运行。</p>
+  <button id="beginCalibration" class="primary">开始横向校准</button>
+  <p id="calibrationStatus" role="status">DPI = 水平原始计数 ÷ 实际移动英寸。屏幕条会适配窗口大小，仅作引导；它不等同于桌面物理距离，也不参与帧率换算。</p>
+  <button id="acceptCalibration" hidden>使用本次估算</button>
+  <label for="manualDpi">已知硬件基准 DPI</label><input id="manualDpi" type="number" min="100" max="32000" step="1" placeholder="例如 800 或 1600"><button id="confirmManualDpi">确认驱动中的硬件基准 DPI</button><button id="cancelCalibration">返回设置</button>
+</dialog>
+<dialog id="rawPermissionDialog" aria-labelledby="rawPermissionTitle"><h2 id="rawPermissionTitle">允许本次原始鼠标校准？</h2><p>按空格开始后，本机后台将通过 Windows Raw Input 采集鼠标相对移动计数，不受系统指针速度或画面帧数换算影响。只在本轮校准期间采集，完成、取消或 30 秒后停止。</p><p>原始计数仅用于本机距离估算，不保存原始记录、不上传给 AI，不修改系统或硬件 DPI。请只移动用于练枪的一只鼠标。</p><button id="allowRawCapture" class="primary">同意本次采集并进入引导</button><button id="browserCalibration">改用浏览器输入估算（精度较低）</button><button id="denyRawCapture">暂不校准</button></dialog>
+<dialog id="mousePermissionDialog" aria-labelledby="mousePermissionTitle"><h2 id="mousePermissionTitle">允许读取本机鼠标设置？</h2><p>本机后台将读取 Windows 指针速度和加速度设置，用于提示校准误差，不会修改系统设置。硬件 DPI 通常无法通过 Windows 通用接口获取；读取的设置不上传给 AI。</p><p class="hint">只适用于后台与浏览器在同一台电脑上运行。远程后台无法读取你这台电脑的鼠标。</p><button id="allowMouseRead" class="primary">同意本次读取</button><button id="denyMouseRead">暂不读取</button></dialog>
+<div id="calibrationGuide" hidden><b>横向校准 · 左 → 右</b><p id="calibrationProgress">请将鼠标放在左端，按空格开始</p><div class="calibration-track"><span>左端</span><div class="calibration-rail"><i id="calibrationCursor"></i></div><span>右端</span></div><p id="calibrationScale" class="hint">自适应引导条，不能代替桌面上的尺子</p><small>空格开始采集 · Enter 完成 · Esc 取消 · 不要抬起鼠标或改变 DPI 档位</small></div>
+<dialog id="resultDialog" aria-labelledby="resultTitle">
+  <p class="result-eyebrow">训练完成</p><h2 id="resultTitle">本轮训练报告</h2><div id="resultScore" class="result-score">0</div><p class="score-caption">分 / 1000 · 仅用于相同靶型与设置下的训练对比</p>
+  <div id="resultStats" class="result-stats"></div><p id="scoreFormula" class="hint"></p>
+  <h3>下一轮可以改进</h3><ul id="resultImprovements"></ul>
+  <p id="resultAiStatus" role="status">AI 优化尚未执行；你可以保留当前设置。</p>
+  <button id="optimizeResult" class="primary">AI 分析并优化下一轮</button><button id="retryWithoutAi">保持当前设置，再来一局</button><button id="closeResult">返回设置</button>
+</dialog>
+<dialog id="retryDialog" aria-labelledby="retryTitle"><h2 id="retryTitle">优化完成，再来一局？</h2><p id="optimizationChange"></p><p id="optimizationReason"></p><p id="optimizationDpi" class="hint"></p><button id="retryOptimized" class="primary">按新设置再来一局</button><button id="inspectSettings">先查看 DPI 和灵敏度</button></dialog>
+<script src="range-loader.js?v=20261112-fix-enter-4"></script><script src="range-targets.js?v=20261112-fix-enter-4"></script><script src="training-coach.js?v=20261112-fix-enter-4"></script><script src="app.js?v=20261112-fix-enter-4"></script></body></html>
+

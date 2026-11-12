@@ -1,0 +1,11 @@
+练枪靶场/build/
+练枪靶场/dist/
+练枪靶场/tmp/
+练枪靶场/__pycache__/
+练枪靶场/src-tauri/target/
+练枪靶场/src-tauri/gen/
+练枪靶场/assets/
+练枪靶场/launcher.py
+练枪靶场/盐线练枪靶场.exe
+练枪靶场/盐线练枪靶场.spec
+*.pyc

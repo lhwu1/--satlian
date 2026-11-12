@@ -1,0 +1,16 @@
+[package]
+name = "saltline-range"
+version = "1.0.0"
+description = "沿线练枪靶场桌面端"
+edition = "2021"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
