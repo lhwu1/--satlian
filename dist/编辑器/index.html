@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>沿线 · 地图编辑器</title>
+  <link rel="stylesheet" href="editor.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html"><b>沿线</b><span>地图编辑器</span></a>
+    <label class="mapname">地图名称<input id="mapName" value="新建训练地图" maxlength="48"></label>
+    <div class="actions">
+      <button id="newMap">新建</button><button id="saveMap">保存工程</button><button id="loadMap">打开工程</button>
+      <button class="primary" id="exportMap">导出地图 HTML</button>
+      <button id="settingsButton">设置 / MCP</button><button id="helpButton" aria-label="使用帮助">？</button>
+      <input id="projectFile" type="file" accept=".json,application/json" hidden>
+    </div>
+  </header>
+  <main>
+    <section class="workspace">
+      <div class="stage" id="stage">
+        <iframe id="scene" title="三维地图编辑区" allow="fullscreen"></iframe>
+        <div class="stage-overlay" id="stageOverlay"><div class="drop-hint">将下方素材拖到这里，或点击素材卡片放置</div></div>
+        <div class="stage-tools"><button id="addFloor">添加可调地基</button><button id="encloseMap">封闭地图边界</button><button id="addWall">添加空气墙</button><button id="frameAll">回到场景中心</button><button id="objectEdit">对象调整</button><button id="freeCamera">自由视角</button></div>
+        <div class="scene-status" id="sceneStatus">正在加载本地场景…</div>
+      </div>
+      <aside class="inspector">
+        <div class="inspector-head"><h2>对象属性</h2><button id="deleteObject">删除</button></div>
+        <p class="muted" id="emptySelect">选择对象后可调整位置、旋转、大小和碰撞显示。</p>
+        <fieldset class="teams"><legend>攻防与出生点</legend><label>进攻方<input id="attackers" value="进攻方"></label><label>防守方<input id="defenders" value="防守方"></label><label>目标任务<input id="objectiveName" value="争夺并控制目标区域"></label><button id="addSpawn">添加进攻出生点</button><button id="addDefenseSpawn">添加防守出生点</button></fieldset>
+        <div id="fields" hidden>
+          <div class="object-name" id="selectedName"></div><fieldset id="materialFields"><legend>对象材质</legend><label>部位<select id="materialSlot"><option value="*">全部部位</option></select></label><label>材质<select id="materialChoice"></select></label><button id="applyMaterial">应用材质</button></fieldset>
+          <fieldset id="foundationFields" hidden><legend>地基尺寸（米）</legend><div class="xyz"><label>宽度<input id="foundationWidth" type="number" min="4" step="1"></label><label>厚度<input id="foundationThickness" type="number" min="0.1" step="0.1"></label><label>长度<input id="foundationDepth" type="number" min="4" step="1"></label></div><small class="muted">宽度对应 X 轴，长度对应 Z 轴；调整后立即更新场景。</small></fieldset>
+          <fieldset id="airwallFields" hidden><legend>空气墙尺寸（米）</legend><div class="xyz"><label>宽度<input id="airwallWidth" type="number" min="0.1" step="0.1"></label><label>高度<input id="airwallHeight" type="number" min="0.1" step="0.1"></label><label>厚度<input id="airwallDepth" type="number" min="0.05" step="0.05"></label></div><small class="muted">选中空气墙时显示青色线框，可拖动或调整三轴尺寸。</small></fieldset>
+          <fieldset><legend>位置（米）</legend><div class="xyz"><label>X<input data-transform="position" data-axis="0" type="number" step="0.1"></label><label>Y<input data-transform="position" data-axis="1" type="number" step="0.1"></label><label>Z<input data-transform="position" data-axis="2" type="number" step="0.1"></label></div></fieldset>
+          <fieldset><legend>旋转（度）</legend><div class="xyz"><label>X<input data-transform="rotation" data-axis="0" type="number" step="5"></label><label>Y<input data-transform="rotation" data-axis="1" type="number" step="5"></label><label>Z<input data-transform="rotation" data-axis="2" type="number" step="5"></label></div></fieldset>
+          <fieldset><legend>缩放</legend><div class="xyz"><label>X<input data-transform="scale" data-axis="0" type="number" step="0.1" min="0.1"></label><label>Y<input data-transform="scale" data-axis="1" type="number" step="0.1" min="0.1"></label><label>Z<input data-transform="scale" data-axis="2" type="number" step="0.1" min="0.1"></label></div><label class="check"><input id="uniformScale" type="checkbox" checked>等比缩放</label></fieldset>
+          <label class="check collider"><input id="showCollider" type="checkbox">显示碰撞体</label>
+        </div>
+        <div class="outliner"><h3>地图对象 <small id="objectCount">0</small></h3><div id="objectList"></div></div>
+        <div class="editor-help"><b>操作提示</b><span>点击素材卡片放置对象</span><span>拖动素材卡片可指定位置</span><span>对象调整：固定视角点击选取，拖动平移，滚轮缩放</span><span>右侧数字框编辑对象变换</span><span>保存工程可继续编辑；导出 HTML 可单独打开</span></div>
+      </aside>
+    </section>
+    <section class="library">
+      <div class="library-head"><div><h2>素材库</h2><p>可拖拽到上方场景。支持场景建筑、道具、地面材质、角色、武器与 AI 生成的单文件素材。</p></div><div class="library-actions"><input id="assetSearch" type="search" placeholder="搜索素材…"><button id="importAsset">导入 AI 素材 HTML</button><input id="assetFile" type="file" accept=".html,text/html" multiple hidden></div></div>
+      <nav class="filters" id="filters"><button class="active" data-filter="all">全部</button><button data-filter="assembly">场景 / 建筑</button><button data-filter="prop">道具</button><button data-filter="material">地板 / 材质</button><button data-filter="actor">角色</button><button data-filter="weapon">武器</button><button data-filter="preview">仅预览</button><button data-filter="custom">AI 导入</button></nav>
+      <div class="asset-list" id="assetList"></div>
+    </section>
+  </main>
+  <div class="toast" id="toast" role="status"></div>
+  <dialog id="helpDialog"><div class="help-head"><h2>地图编辑器使用说明</h2><button id="closeHelp">关闭</button></div><p>把下方标记为“可放置”的素材拖入上方场景，或点击卡片放到中心。标记为“仅预览”的 UI、受击效果和音效素材只用于查看，不能放进地图。地图按需要挑选素材，不必把素材库全部堆进场景。</p><p><b>地基：</b>点击“添加可调地基”创建基础平台，选中后可在右侧直接改宽度、厚度和长度（米）。宽度沿 X 轴，长度沿 Z 轴。海面使用独立水面对象，可与地基分别调整。</p><p><b>视角：</b>编辑区拖动旋转、滚轮缩放；点击“自由视角”后用 WASD 平移，空格上升，Ctrl 下降，移动鼠标转向，Esc 退出。</p><p><b>编辑：</b>选中对象后在右侧修改位置、旋转和大小；Delete 删除对象；显示碰撞体可检查素材自带碰撞范围。</p><p><b>导出：</b>导出的 HTML 是独立地图观察页，只显示环境和地图对象，可自由观察场景，不进入对战、不生成玩家或 HUD。拖动旋转、滚轮缩放、WASD 移动，空格上升，Ctrl 下降。</p><p><b>保存工程：</b>首次保存会请求选择一个文件夹，并在其中创建“地图”目录。也可导出独立 HTML 地图。目录扫描要求通过本地 HTTP 服务打开（例如项目根目录运行 <code>py -m http.server 8000</code>）。</p></dialog>
+  <script src="map-export.js"></script><script src="thumbnails.js"></script><script src="assets.js"></script><script src="editor.js"></script>
+<script src="settings.js"></script></body>
+</html>

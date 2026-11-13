@@ -1,0 +1,19 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>汤姆逊 M1928 · 胡桃木与钢制弹鼓</title><style>html,body,iframe{margin:0;width:100%;height:100%;border:0}</style><iframe id="preview"></iframe><header hidden><h1 id="asset-title"></h1><p id="status"></p></header><script id="along-asset" type="application/json">{"schema":"along.html-asset/1","id":"ai.thompson1928","name":"汤姆逊 M1928 · 胡桃木与钢制弹鼓","kind":"weapon","assetKind":"weapon","version":"1.0.0","units":"m","visualStyle":"realistic","styleReference":"沿线港口写实磨损金属与胡桃木，M1928实物比例"}</script><script id="along-factory" type="text/plain">const T=ctx.THREE,r=new T.Group();
+const steel=ctx.original.material('gunmetal'),black=ctx.original.material('steel_dark'),wood=ctx.original.material('wood_dark');
+function box(w,h,d,x,y,z,mat,slot){const m=new T.Mesh(new T.BoxGeometry(w,h,d,2,2,2),mat);m.position.set(x,y,z);m.userData.alongSlot=slot;m.castShadow=true;m.receiveShadow=true;r.add(m);return m;}
+function cyl(radius,length,x,y,z,mat,axis='z',slot='steel'){const m=new T.Mesh(new T.CylinderGeometry(radius,radius,length,24),mat);if(axis==='z')m.rotation.x=Math.PI/2;if(axis==='x')m.rotation.z=Math.PI/2;m.position.set(x,y,z);m.userData.alongSlot=slot;m.castShadow=true;r.add(m);return m;}
+box(.058,.086,.3,0,.23,-.035,steel,'receiver');box(.048,.034,.20,0,.288,-.048,black,'receiver');
+box(.05,.053,.15,0,.19,.055,steel,'receiver');
+cyl(.018,.28,0,.245,-.315,steel);for(let i=0;i<22;i++)cyl(.024,.004,0,.245,-.20-i*.007,black);
+cyl(.023,.045,0,.245,-.478,steel);cyl(.026,.014,0,.245,-.501,black);box(.012,.026,.015,0,.278,-.48,black,'sights');
+box(.014,.032,.035,0,.318,.065,black,'sights');box(.035,.008,.045,0,.301,.065,steel,'sights');
+// Walnut buttstock, foregrip and pistol grip, full-size 1928 pattern.
+const stock=box(.055,.102,.245,0,.185,.265,wood,'walnut');stock.rotation.x=-.14;box(.06,.11,.014,0,.165,.39,black,'buttplate');
+const grip=box(.043,.112,.052,0,.124,.10,wood,'walnut');grip.rotation.x=-.27;
+const fore=box(.042,.112,.051,0,.148,-.255,wood,'walnut');fore.rotation.x=.16;
+const drum=cyl(.071,.045,0,.135,-.09,black,'x','magazine');cyl(.055,.049,0,.135,-.09,steel,'x','magazine');cyl(.014,.052,0,.135,-.09,black,'x','magazine');
+const guard=new T.Mesh(new T.TorusGeometry(.032,.003,8,24,Math.PI*1.65),steel);guard.rotation.y=Math.PI/2;guard.position.set(0,.139,.025);guard.userData.alongSlot='trigger';r.add(guard);const trigger=box(.004,.032,.006,0,.15,.025,black,'trigger');trigger.rotation.x=-.3;
+box(.012,.014,.055,.034,.254,-.025,steel,'bolt');box(.025,.012,.012,.042,.254,0,black,'bolt');
+for(const z of [-.14,.055,.15])for(const x of [-.031,.031])cyl(.004,.003,x,.237,z,black,'x','rivets');
+for(let i=0;i<8;i++)box(.0008,.013,.04,.0291,.205+i*.003,.26+i*.005,black,'grain');
+r.userData.alongSlots=['receiver','steel','walnut','magazine','sights','trigger','buttplate','bolt','rivets','grain'].map(id=>({id,name:id}));r.userData.alongColliders=[{min:[-.05,.06,-.52],max:[.05,.34,.41],surface:'metal',purpose:'occupancy'}];r.userData.alongAnchors={muzzle:[0,.245,-.52],grip:[0,.14,.1],sight:[0,.32,.065]};return r;</script><script src="../公共/素材预览.js"></script></html>
