@@ -17,16 +17,22 @@ function checkFactory(code){if(typeof code!=='string'||!code.trim())throw Error(
 function validateAssetQuality(meta,code){
  const kind=String(meta.assetKind||meta.kind||'prop').toLowerCase(), source=String(code);
  const mesh=(source.match(/new\s+T\.Mesh\s*\(/g)||[]).length;
+ const componentCalls=(source.match(/\b(?:add|part|component|body|box|contour|cz|cx)\s*\(/g)||[]).length;
  const geometry=(source.match(/new\s+T\.(?:Box|Cylinder|Sphere|Capsule|Cone|Torus|Extrude|Shape|Lathe|Tube|Buffer)Geometry\s*\(/g)||[]).length;
  if(!geometry)throw Error('素材必须创建可见的真实几何体，不能只返回空 Group');
  const slots=(source.match(/alongSlot\s*=/g)||[]).length+(source.match(/alongSlots\s*=/g)||[]).length;
  if(slots<2)throw Error('素材至少需要两个可区分的材质槽，并为部件设置 alongSlot');
  const requireWords=(words,label)=>{const missing=words.filter(w=>!new RegExp(w,'i').test(source));if(missing.length)throw Error(`${label}缺少必要部件：${missing.join('、')}`);};
  if(kind==='weapon'){
-   if(mesh<8||geometry<6)throw Error('武器细节不足：至少需要 8 个独立 Mesh 和 6 个几何部件，禁止用少量方盒代替整枪');
+   if(mesh+componentCalls<8||geometry<3)throw Error('武器细节不足：至少需要 8 个独立 Mesh 和 6 个几何部件，禁止用少量方盒代替整枪');
    requireWords(['muzzle|barrel','receiver|body','grip|handle','stock|butt','sight|optic','magazine|mag|drum','trigger|guard'],'武器');
    if(!/CylinderGeometry|ExtrudeGeometry|Shape|TubeGeometry/i.test(source))throw Error('武器必须同时使用圆柱/挤压/曲线等非方盒几何表现枪管、轮廓或附件');
    if(!/metalness|roughness|vertexColors|MeshPhysicalMaterial|MeshStandardMaterial/i.test(source))throw Error('武器必须声明金属度、粗糙度或顶点颜色材质参数');
+   if((source.match(/(?:弹链|belt|链条|link)/gi)||[]).length && (source.match(/(?:弹匣|magazine|magwell|drum)/gi)||[]).length>2)throw Error('武器供弹结构冲突：不得同时堆叠弹链与弹匣/弹鼓，必须声明唯一 feed 类型');
+   if(!/alongAnchors\s*=/.test(source)||!/alongColliders\s*=/.test(source))throw Error('武器必须独立提供 alongAnchors 与 alongColliders 业务数据');
+   if(!/partType|parentPart|mount|magwell|topRail|handguardRail/i.test(source))throw Error('武器必须声明功能挂载关系，配件不能悬浮');
+   const boxes=(source.match(/new\s+T\.BoxGeometry\s*\(/g)||[]).length;
+   if(boxes>18 && !/ExtrudeGeometry|TubeGeometry|LatheGeometry/i.test(source))throw Error('武器主体过度依赖方盒，必须用截面挤压或曲线扫掠建立连续轮廓');
  }
  if(kind==='character'||kind==='person'){
    if(mesh<8||geometry<6)throw Error('人物细节不足：至少需要头部、躯干、双臂、双腿和装备等 8 个独立 Mesh');
