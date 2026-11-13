@@ -13,6 +13,33 @@ const descriptors=[
 ];
 function catalog(){const code=fs.readFileSync(path.join(__dirname,'assets.js'),'utf8');return JSON.parse(code.slice(code.indexOf('=')+1).trim().replace(/;$/,''));}
 function checkFactory(code){if(typeof code!=='string'||!code.trim())throw Error('工厂不能为空');if(/\b(?:window|document|parent|globalThis|process|require|import|fetch|XMLHttpRequest|WebSocket|eval|Function|Worker|localStorage|setTimeout|setInterval)\b|constructor\s*\[?|__proto__|https?:\/\//.test(code))throw Error('工厂包含不允许的系统/网络/动态执行代码');new Function('ctx',code);}
+// 说明性指南不足以阻止模型提交“几个方盒拼接”的占位素材；这里执行可验证的最低质量门槛。
+function validateAssetQuality(meta,code){
+ const kind=String(meta.assetKind||meta.kind||'prop').toLowerCase(), source=String(code);
+ const mesh=(source.match(/new\s+T\.Mesh\s*\(/g)||[]).length;
+ const geometry=(source.match(/new\s+T\.(?:Box|Cylinder|Sphere|Capsule|Cone|Torus|Extrude|Shape|Lathe|Tube|Buffer)Geometry\s*\(/g)||[]).length;
+ if(!geometry)throw Error('素材必须创建可见的真实几何体，不能只返回空 Group');
+ const slots=(source.match(/alongSlot\s*=/g)||[]).length+(source.match(/alongSlots\s*=/g)||[]).length;
+ if(slots<2)throw Error('素材至少需要两个可区分的材质槽，并为部件设置 alongSlot');
+ const requireWords=(words,label)=>{const missing=words.filter(w=>!new RegExp(w,'i').test(source));if(missing.length)throw Error(`${label}缺少必要部件：${missing.join('、')}`);};
+ if(kind==='weapon'){
+   if(mesh<8||geometry<6)throw Error('武器细节不足：至少需要 8 个独立 Mesh 和 6 个几何部件，禁止用少量方盒代替整枪');
+   requireWords(['muzzle|barrel','receiver|body','grip|handle','stock|butt','sight|optic','magazine|mag|drum','trigger|guard'],'武器');
+   if(!/CylinderGeometry|ExtrudeGeometry|Shape|TubeGeometry/i.test(source))throw Error('武器必须同时使用圆柱/挤压/曲线等非方盒几何表现枪管、轮廓或附件');
+   if(!/metalness|roughness|vertexColors|MeshPhysicalMaterial|MeshStandardMaterial/i.test(source))throw Error('武器必须声明金属度、粗糙度或顶点颜色材质参数');
+ }
+ if(kind==='character'||kind==='person'){
+   if(mesh<8||geometry<6)throw Error('人物细节不足：至少需要头部、躯干、双臂、双腿和装备等 8 个独立 Mesh');
+   requireWords(['head|helmet','body|torso|spine','arm','hand|glove','leg','foot|boot'],'人物');
+ }
+ if(kind==='building'||kind==='prop'){
+   if(mesh<3||geometry<3)throw Error('道具/建筑结构不足：至少需要 3 个可见部件，不能提交空壳或单一方块');
+ }
+ if(kind==='material'){
+   if(mesh<3||geometry<3)throw Error('材质预览不足：必须提供至少三种形状的真实预览面，不能只展示一个球或一块平面');
+   if(!/roughness|metalness|normalMap|color/i.test(source))throw Error('材质必须声明颜色、粗糙度、金属度或纹理参数');
+ }
+}
 const eventFile=path.join(root,'.along-editor-events.json');
 function readEvents(){try{const stored=JSON.parse(fs.readFileSync(eventFile,'utf8'));if(Array.isArray(stored)){events=stored;revision=events.at(-1)?.revision||0;}}catch{}}
 function emit(type,data){readEvents();revision=Math.max(Date.now(),revision+1);events.push({revision,type,...data});events=events.slice(-200);const tmp=eventFile+'.'+process.pid+'.tmp';fs.writeFileSync(tmp,JSON.stringify(events));fs.renameSync(tmp,eventFile);}
@@ -31,7 +58,7 @@ function toolCall(name,args={}){
   const html=args.html;if(typeof html!=='string'||html.length>2e6)throw Error('HTML 必须小于2MB');
   const meta=html.match(/<script\s+id="along-asset"\s+type="application\/json">([\s\S]*?)<\/script>/),factory=html.match(/<script\s+id="along-factory"\s+type="text\/plain">([\s\S]*?)<\/script>/);if(!meta||!factory)throw Error('缺少素材元数据或工厂');const a=JSON.parse(meta[1]);
   if(a.sourceAssetId||a.cloneOf){const sourceId=a.sourceAssetId||a.cloneOf;if(!catalog().some(x=>x.id===sourceId))throw Error('sourceAssetId 必须指向现有素材');if(a.id===sourceId)throw Error('AI 只能复制成新 id，禁止修改已有素材');a.cloneOf=sourceId;}
-  if(!a.id?.startsWith('ai.')||!a.name||!a.visualStyle||!a.styleReference||a.units!=='m')throw Error('缺少 ai. 前缀 id、名称、风格参考或米单位');checkFactory(factory[1]);if(!factory[1].includes('alongColliders')||!factory[1].includes('alongSlot'))throw Error('必须定义碰撞和材质槽');if(!a.previewImage||!/^data:image\/(png|jpeg|webp);base64,/.test(a.previewImage))throw Error('不允许缺少 previewImage；新素材必须提供本地 base64 PNG/JPEG/WebP，不能使用远程图片');
+  if(!a.id?.startsWith('ai.')||!a.name||!a.visualStyle||!a.styleReference||a.units!=='m')throw Error('缺少 ai. 前缀 id、名称、风格参考或米单位');checkFactory(factory[1]);if(!factory[1].includes('alongColliders')||!factory[1].includes('alongSlot'))throw Error('必须定义碰撞和材质槽');validateAssetQuality(a,factory[1]);if(!a.previewImage||!/^data:image\/(png|jpeg|webp);base64,/.test(a.previewImage))throw Error('不允许缺少 previewImage；新素材必须提供本地 base64 PNG/JPEG/WebP，不能使用远程图片');
   const dir=path.join(root,'素材/AI生成');fs.mkdirSync(dir,{recursive:true});const file=a.id.replace(/[^a-zA-Z0-9_.-]/g,'_')+'.html',dest=path.join(dir,file);if(fs.existsSync(dest))throw Error('素材已存在，请使用新 id/version，避免覆盖');
   // Only the validated JSON and factory are executable input. Ignore any extra scripts in supplied document.
   const body='<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>'+a.name.replace(/[<>&]/g,'')+'</title><style>html,body,iframe{margin:0;width:100%;height:100%;border:0}</style><iframe id="preview"></iframe><header hidden><h1 id="asset-title"></h1><p id="status"></p></header><script id="along-asset" type="application/json">'+JSON.stringify(a).replace(/</g,'\\u003c')+'</script><script id="along-factory" type="text/plain">'+factory[1]+'</script><script src="../公共/素材预览.js"></script></html>';
@@ -53,4 +80,4 @@ function start(port=8765){
  });server.listen(port,'127.0.0.1',()=>process.stderr.write('沿线编辑器：http://127.0.0.1:'+port+'/编辑器/\n'));return server;
 }
 if(require.main===module){const serveOnly=process.argv.includes('--serve'),server=start(Number(process.env.ALONG_EDITOR_PORT)||8765);server.on('error',error=>{if(error.code==='EADDRINUSE'&&!serveOnly){process.stderr.write('编辑器服务已在运行，通过本地事件文件同步生成结果。\n');}else{process.stderr.write(error.message+'\n');process.exitCode=1;}});if(!serveOnly){readline.createInterface({input:process.stdin}).on('line',line=>{let req;try{req=JSON.parse(line);if(req.id===undefined)return;const result=rpc(req);process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:req.id,result})+'\n');}catch(e){process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:req?.id||null,error:{code:-32603,message:e.message}})+'\n');}}).on('close',()=>server.close());}}
-module.exports={rpc,toolCall,start,checkFactory};
+module.exports={rpc,toolCall,start,checkFactory,validateAssetQuality};

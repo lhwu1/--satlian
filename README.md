@@ -43,6 +43,4 @@ cargo build --release --manifest-path src-tauri/Cargo.toml
 
 ![地图编辑器页面](docs/images/editor.png)
 
-![地图编辑器预览](素材/预览/ai.thompson1928.png)
-
 编辑器支持 Blender 风格的对象调整：对象模式下点击选择、拖动平移、滚轮缩放，`Ctrl+D` 复制，`Ctrl+Z`/`Ctrl+Y` 撤销与重做。自由视角只使用 `W/S` 前后移动，鼠标控制方向，`Esc` 退出。空气墙可从工具栏创建，选中后以线框尺寸面板调整。
