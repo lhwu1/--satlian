@@ -1,4 +1,4 @@
-// 从未修改的原始场景生成共享预览运行时；原始 index.html 不写入。
+﻿// 从未修改的原始场景生成共享预览运行时；原始 index.html 不写入。
 const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '../..');
@@ -133,7 +133,7 @@ async function alongHandleMessage(data) {
           scene.add(new T.HemisphereLight(0xd8efff,0xaaa18b,3.2));
           window.__G.render.sun.color.setHex(0xfff4dd);window.__G.render.sun.intensity=3.8;window.__G.render.sun.position.set(-30,65,-25);
           window.__G.renderer.toneMapping=T.ACESFilmicToneMapping;window.__G.renderer.toneMappingExposure=1.15;
-          if(window.__G.render.sky)window.__G.render.sky.visible=false;scene.background=new T.Color(0x253037);scene.fog=null;
+          if(window.__G.render.sky)window.__G.render.sky.visible=true;scene.background=new T.Color(0x253037);scene.fog=null;
         }
         if (window.__alongPreviewObject) scene.remove(window.__alongPreviewObject);
         window.__alongPreviewObject=object;
@@ -145,7 +145,7 @@ async function alongHandleMessage(data) {
         scene.add(object);
         const distance=Math.max(size.x,size.y,size.z,1)*1.6;
         window.__setShot({cam:[center.x+distance,center.y+distance*.65,center.z+distance,center.x,center.y,center.z].join(','),fov:45});
-        if(data.type==='thumbnail'){scene.background=new T.Color(0x253037);scene.fog=null;if(window.__G.render.sky)window.__G.render.sky.visible=false;await new Promise(resolve=>setTimeout(resolve,350));window.__G.render.renderer.render(scene,window.__G.camera);alongReply('thumbnail-ready',{id:data.id,url:window.__G.render.renderer.domElement.toDataURL('image/png')});}
+        if(data.type==='thumbnail'){scene.background=new T.Color(0x253037);scene.fog=null;if(window.__G.render.sky)window.__G.render.sky.visible=true;await new Promise(resolve=>setTimeout(resolve,350));window.__G.render.renderer.render(scene,window.__G.camera);alongReply('thumbnail-ready',{id:data.id,url:window.__G.render.renderer.domElement.toDataURL('image/png')});}
         alongReply('preview-ready',{id:data.id,size:[size.x,size.y,size.z]});
       } else {
         object.name=data.id||'asset';
@@ -165,7 +165,7 @@ async function alongHandleMessage(data) {
         const floor=new T.Mesh(new T.PlaneGeometry(80,80),window.__G.mats.get('concrete'));
         floor.rotation.x=-Math.PI/2;floor.position.y=-.04;floor.name='editor-ground';scene.add(floor);
         const grid=new T.GridHelper(80,80,0x657579,0x354347);grid.position.y=-.025;scene.add(grid); */
-        scene.background=new T.Color(0xa7d4ed);scene.fog=new T.FogExp2(0xa7d4ed,.0015);if(window.__G.render.sky)window.__G.render.sky.visible=false;
+        scene.background=new T.Color(0xa7d4ed);scene.fog=new T.FogExp2(0xa7d4ed,.0015);if(window.__G.render.sky)window.__G.render.sky.visible=true;
         window.__G.render.sun.intensity=3.8;window.__G.render.sun.color.setHex(0xfff4dd);window.__G.render.sun.position.set(-30,65,-25);
         const ambient=new T.HemisphereLight(0xd8efff,0xaaa18b,3.2);scene.add(ambient);
         const renderer=window.__G.renderer;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
@@ -230,3 +230,4 @@ window.addEventListener('message',event=>alongHandleMessage(event.data));
 window.addEventListener('load',()=>{const ping=()=>{if(window.__ready)alongReply('ready');};setInterval(ping,500);});
 `;
 fs.writeFileSync(path.join(__dirname, '原场景运行时.html'), source.replace(needle, adapter + needle));
+

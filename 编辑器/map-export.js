@@ -1,7 +1,7 @@
 (()=>{const finite3=v=>Array.isArray(v)&&v.length===3&&v.every(Number.isFinite),safe=v=>JSON.stringify(v).replace(/</g,'\\u003c');window.alongValidateMap=function validate(project){
  const errors=[];if(!project||!Array.isArray(project.objects))return ['缺少 objects'];
  const objects=project.objects,ids=new Set();
- if(project.weather!=='sunny')errors.push('必须明确 weather: sunny');
+ if(typeof project.weather!=='string'||!project.weather.trim()||(project.requirements?.weatherPolicy!=='any'&&!['sunny','晴天'].includes(project.weather)))errors.push('必须明确 weather: sunny（或在 requirements.weatherPolicy=any 时提供用户指定天气）');
  if(!project.name||!project.teams?.attackers||!project.teams?.defenders||!project.teams?.objective)errors.push('缺少地图名称、两队名称或目标');
  const b=project.design?.playableBounds;
  if(!b||!Array.isArray(b.min)||!Array.isArray(b.max)||b.min.length!==2||b.max.length!==2||![...b.min,...b.max].every(Number.isFinite)||b.min.some((v,i)=>v>=b.max[i]))return [...errors,'需要有效的 design.playableBounds，min/max 为 [x,z]'];

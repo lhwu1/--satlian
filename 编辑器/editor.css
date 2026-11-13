@@ -5,3 +5,4 @@
 .teams label{display:block;font-size:11px;color:var(--muted);margin:5px 0}.teams label input{display:block;width:100%;margin-top:3px}.teams button{width:100%;margin-top:5px;padding:6px;font-size:11px}
 
 select,textarea{width:100%;background:#101719;color:#deeee8;border:1px solid #3a5049;padding:8px;border-radius:4px}#materialFields label{display:block;margin:8px 0}.asset-thumb img{width:100%;height:100%;object-fit:contain}.settings-dialog{width:min(800px,90vw);max-height:90vh;overflow:auto;background:#161e21;color:#deeee8;border:1px solid #466b5c;border-radius:12px;padding:24px}.settings-dialog textarea{min-height:170px;font:12px/1.6 Consolas,monospace}.settings-dialog pre{white-space:pre-wrap}.settings-dialog a{color:#8ed4bf}.settings-dialog::backdrop{background:#000a}
+.stage-overlay.object-edit{cursor:crosshair;outline:2px solid var(--mint);outline-offset:-2px}

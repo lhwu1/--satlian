@@ -5,7 +5,7 @@ const guideRoot=path.join(root,'docs/ai素材指南');
 const guide=()=>fs.readdirSync(guideRoot).filter(n=>n.endsWith('.md')).map(n=>'\n# '+n+'\n'+fs.readFileSync(path.join(guideRoot,n),'utf8')).join('\n');
 const receipt=crypto.createHash('sha256').update(guide()).digest('hex');let hasRead=false,events=[],revision=0;
 const descriptors=[
- {name:'read_guidance',description:'必须首先调用。阅读全部素材/地图/风格指导，返回本次写入必需的 guidanceToken。',inputSchema:{type:'object',properties:{}}},
+ {name:'read_guidance',description:'必须首先调用。根据用户请求和参考图读取可配置指导，返回 guidanceToken。',inputSchema:{type:'object',properties:{requestContext:{type:'string'},referenceImages:{type:'array'},requirements:{type:'object'}}}},
  {name:'list_assets',description:'查询可复用素材及实际工厂，不应重新发明现有道具。',inputSchema:{type:'object',properties:{kind:{type:'string'}}}},
  {name:'validate_map',description:'检查晴天、米制变换、底板、双方出生点、四边封闭空气墙。',inputSchema:{type:'object',properties:{project:{type:'object'}},required:['project']}},
  {name:'create_map',description:'遵照 read_guidance 组建地图，验证通过后保存工程及单文件 HTML 并通知编辑器。工厂在渲染器中执行。',inputSchema:{type:'object',properties:{guidanceToken:{type:'string'},project:{type:'object'}},required:['guidanceToken','project']}},
@@ -17,8 +17,9 @@ const eventFile=path.join(root,'.along-editor-events.json');
 function readEvents(){try{const stored=JSON.parse(fs.readFileSync(eventFile,'utf8'));if(Array.isArray(stored)){events=stored;revision=events.at(-1)?.revision||0;}}catch{}}
 function emit(type,data){readEvents();revision=Math.max(Date.now(),revision+1);events.push({revision,type,...data});events=events.slice(-200);const tmp=eventFile+'.'+process.pid+'.tmp';fs.writeFileSync(tmp,JSON.stringify(events));fs.renameSync(tmp,eventFile);}
 function toolCall(name,args={}){
- if(name==='read_guidance'){hasRead=true;return {guidanceToken:receipt,instructions:guide()+'\n地图额外规则：weather=sunny；design.playableBounds={min:[x,z],max:[x,z]}；底板顶面 Y=0；双方 role=spawn，team=进攻方/防守方；四边必须有从地面到至少4米、接缝重叠的空气墙；出生点有掩体且至少相隔8米；三条可绕行通路，宽度至少2米。提交前在编辑器检查真实渲染、碰撞与可达性。不得用占位插画冒充缩略图。人物应有服装褶皱、战术背心、弹袋、头盔、护目镜、手套、护膝、鞋靴。'};}
+ if(name==='read_guidance'){hasRead=true;const context=args.requestContext||'',refs=Array.isArray(args.referenceImages)?args.referenceImages:[];return {guidanceToken:receipt,instructions:guide()+'\n本次任务上下文：'+context+'；参考图数量：'+refs.length+'。先用 list_assets 判断缺少素材；缺少的素材必须先 create_asset，再 create_map。天气、风格和布局以用户请求及参考图为准。\n地图额外规则：weather 必须是字符串（晴天示例值为 sunny）；design.playableBounds={min:[x,z],max:[x,z]}；底板顶面 Y=0；双方 role=spawn，team=进攻方/防守方；四边必须有从地面到至少4米、接缝重叠的空气墙；出生点有掩体且至少相隔8米；三条可绕行通路，宽度至少2米。提交前在编辑器检查真实渲染、碰撞与可达性。不得用占位插画冒充缩略图。人物应有服装褶皱、战术背心、弹袋、头盔、护目镜、手套、护膝、鞋靴。'};}
  if(name==='list_assets')return {assets:catalog().filter(a=>!args.kind||a.kind===args.kind)};
+ if(name==='plan_map'){if(!hasRead||args.guidanceToken!==receipt)throw Error('先调用 read_guidance');const text=String(args.requestContext||'').toLowerCase(),refs=Array.isArray(args.referenceImages)?args.referenceImages:[],all=catalog(),wanted=[];if(/汤姆逊|thompson/.test(text))wanted.push('ai.thompson1928');if(/人物|士兵|战术|小队/.test(text))wanted.push('builtin.training-dummy');const existing=wanted.map(id=>all.find(a=>a.id===id)).filter(Boolean);return {workflow:'先补素材，后组装地图',referenceImages:refs.length,requiredAssetIds:wanted,existingAssets:existing.map(a=>({id:a.id,name:a.name})),createBeforeMap:wanted.filter(id=>!existing.some(a=>a.id===id)),notes:'参考图只用于分析风格和缺口；新素材必须包含真实预览图。'};}
  if(name==='validate_map')return {valid:validate(args.project).length===0,errors:validate(args.project)};
  if(!hasRead||args.guidanceToken!==receipt)throw Error('先调用 read_guidance 并遵照指导，传入返回的 guidanceToken');
  if(name==='create_map'){
@@ -29,7 +30,7 @@ function toolCall(name,args={}){
  if(name==='create_asset'){
   const html=args.html;if(typeof html!=='string'||html.length>2e6)throw Error('HTML 必须小于2MB');
   const meta=html.match(/<script\s+id="along-asset"\s+type="application\/json">([\s\S]*?)<\/script>/),factory=html.match(/<script\s+id="along-factory"\s+type="text\/plain">([\s\S]*?)<\/script>/);if(!meta||!factory)throw Error('缺少素材元数据或工厂');const a=JSON.parse(meta[1]);
-  if(!a.id?.startsWith('ai.')||!a.name||!a.visualStyle||!a.styleReference||a.units!=='m')throw Error('缺少 ai. 前缀 id、名称、风格参考或米单位');checkFactory(factory[1]);if(!factory[1].includes('alongColliders')||!factory[1].includes('alongSlot'))throw Error('必须定义碰撞和材质槽');
+  if(!a.id?.startsWith('ai.')||!a.name||!a.visualStyle||!a.styleReference||a.units!=='m')throw Error('缺少 ai. 前缀 id、名称、风格参考或米单位');checkFactory(factory[1]);if(!factory[1].includes('alongColliders')||!factory[1].includes('alongSlot'))throw Error('必须定义碰撞和材质槽');if(!a.previewImage||!/^data:image\/(png|jpeg|webp);base64,/.test(a.previewImage))throw Error('不允许缺少 previewImage；新素材必须提供本地 base64 PNG/JPEG/WebP，不能使用远程图片');
   const dir=path.join(root,'素材/AI生成');fs.mkdirSync(dir,{recursive:true});const file=a.id.replace(/[^a-zA-Z0-9_.-]/g,'_')+'.html',dest=path.join(dir,file);if(fs.existsSync(dest))throw Error('素材已存在，请使用新 id/version，避免覆盖');
   // Only the validated JSON and factory are executable input. Ignore any extra scripts in supplied document.
   const body='<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>'+a.name.replace(/[<>&]/g,'')+'</title><style>html,body,iframe{margin:0;width:100%;height:100%;border:0}</style><iframe id="preview"></iframe><header hidden><h1 id="asset-title"></h1><p id="status"></p></header><script id="along-asset" type="application/json">'+JSON.stringify(a).replace(/</g,'\\u003c')+'</script><script id="along-factory" type="text/plain">'+factory[1]+'</script><script src="../公共/素材预览.js"></script></html>';
