@@ -1,0 +1,15 @@
+{
+  "name": "along-map-editor",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "editor": "node 编辑器/mcp-server.cjs --serve",
+    "mcp": "node 编辑器/mcp-server.cjs",
+    "build": "node 素材/公共/生成原场景运行时.js && node 编辑器/生成素材清单.js && node 编辑器/生成导出模块.cjs && node 编辑器/build-port.cjs",
+    "test": "node --test 编辑器/tests/mcp.test.cjs",
+    "test:browser": "node 编辑器/tests/browser.cjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.65.0"
+  }
+}

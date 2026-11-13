@@ -1,0 +1,57 @@
+[
+  {
+    "file": "../原有场景/源码/材质库.js",
+    "start": "var qg={};",
+    "end": "var $g={};"
+  },
+  {
+    "file": "../原有场景/源码/道具库.js",
+    "start": "var $g={};",
+    "end": "var cv={};"
+  },
+  {
+    "file": "../原有场景/源码/场景组合.js",
+    "start": "var cv={};",
+    "end": "var mv={};"
+  },
+  {
+    "file": "../原有场景/源码/港口背景.js",
+    "start": "var mv={};",
+    "end": "var vv={};"
+  },
+  {
+    "file": "../原有场景/源码/地面天气.js",
+    "start": "var vv={};",
+    "end": "var Sv={};"
+  },
+  {
+    "file": "../特效/源码/粒子与贴花.js",
+    "start": "var Sv={};",
+    "end": "var vt=Math.PI*2;"
+  },
+  {
+    "file": "../音效/源码/合成与播放.js",
+    "start": "var vt=Math.PI*2;",
+    "end": "function v_("
+  },
+  {
+    "file": "../武器/源码/枪械与手部.js",
+    "start": "var Xv={};",
+    "end": "var ex={};"
+  },
+  {
+    "file": "../角色/源码/机械角色与动作.js",
+    "start": "var ex={};",
+    "end": "var tx=4,"
+  },
+  {
+    "file": "../UI/源码/HUD.js",
+    "start": "var tx=4,",
+    "end": "var fM="
+  },
+  {
+    "file": "../UI/源码/菜单.js",
+    "start": "var fM=",
+    "end": "var gM="
+  }
+]

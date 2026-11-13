@@ -18,7 +18,9 @@ fn launch_backend(port_file: &Path) -> Result<Child, String> {
     c.spawn().map_err(|e| format!("本机靶场服务启动失败：{e}"))
 }
 fn launch_editor() -> Result<Child,String> {
-    let mut c=Command::new("node"); c.args(["编辑器/mcp-server.cjs","--serve"]).stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::null());
+    let mut c=Command::new("node"); c.args(["编辑器/mcp-server.cjs","--serve"]);
+    if let Ok(exe)=std::env::current_exe() { if let Some(dir)=exe.parent() { c.current_dir(dir); } }
+    c.stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::null());
     #[cfg(windows)] { use std::os::windows::process::CommandExt; c.creation_flags(0x08000000); }
     c.spawn().map_err(|e| format!("地图编辑器服务启动失败，请确认已安装 Node.js：{e}"))
 }
