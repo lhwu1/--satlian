@@ -218,7 +218,9 @@ async function alongHandleMessage(data) {
     }
     if(data.type==='airwall'){
       const root=new T.Group(),dims=data.size||[4,3,.2];
-      const mesh=new T.Mesh(new T.BoxGeometry(...dims),new T.MeshBasicMaterial({color:0x28b8a4,transparent:true,opacity:.22,depthWrite:false}));root.add(mesh);
+      const geometry=new T.BoxGeometry(...dims);
+      const mesh=new T.Mesh(geometry,new T.MeshBasicMaterial({color:0x28b8a4,transparent:true,opacity:.12,depthWrite:false}));
+      const wire=new T.LineSegments(new T.EdgesGeometry(geometry),new T.LineBasicMaterial({color:0x55f2da,transparent:true,opacity:.95}));wire.name='airwall-wireframe';root.add(mesh,wire);
       mesh.visible=!window.__alongObserver;root.name=data.id;root.rotation.set(...(data.transform?.rotation||[0,0,0]));root.scale.set(...(data.transform?.scale||[1,1,1]));root.position.set(...(data.transform?.position||[0,dims[1]/2,0]));
       root.userData.alongColliders=[{min:dims.map(v=>-v/2),max:dims.map(v=>v/2),surface:'airwall'}];
       if(window.__alongEditorObjects.has(data.id))scene.remove(window.__alongEditorObjects.get(data.id));
