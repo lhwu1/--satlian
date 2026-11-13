@@ -11,6 +11,7 @@ const labels=["机匣","机匣盖","护木","导气箍","枪管","枪口装置",
 
 function add(name,g,k,pos,rot=[0,0,0],slot=name){const m=new T.Mesh(g,mat(k));m.name=name;m.position.set(...pos);m.rotation.set(...rot);m.userData.alongSlot=slot;m.castShadow=m.receiveShadow=true;root.add(m);meshes.push(m);return m;}
 function box(name,size,k,pos,rot=[0,0,0],slot=name){const [w,h,d]=size,b=Math.min(.006,Math.min(w,h,d)*.18),s=new T.Shape();s.moveTo(-w/2+b,-h/2);s.lineTo(w/2-b,-h/2);s.quadraticCurveTo(w/2,-h/2,w/2,-h/2+b);s.lineTo(w/2,h/2-b);s.quadraticCurveTo(w/2,h/2,w/2-b,h/2);s.lineTo(-w/2+b,h/2);s.quadraticCurveTo(-w/2,h/2,-w/2,h/2-b);s.lineTo(-w/2,-h/2+b);s.quadraticCurveTo(-w/2,-h/2,-w/2+b,-h/2);const g=new T.ExtrudeGeometry(s,{depth:Math.max(.001,d-2*b),bevelEnabled:true,bevelThickness:b,bevelSize:b,bevelSegments:2,curveSegments:4});g.translate(0,0,-d/2+b);return add(name,g,k,pos,rot,slot)}
+function contour(name,size,k,pos,kind='receiver',slot=name){const [w,h,d]=size,s=new T.Shape(),q=.16;let p=kind==='stock'?[[-.5,-.5],[-.34,-.5],[.5,-.30],[.5,.30],[.28,.5],[-.5,.5]]:kind==='handguard'?[[-.5,-.5],[.38,-.46],[.5,-.28],[.5,.28],[.38,.46],[-.5,.5]]:[[-.5,-.42],[-.34,-.5],[.5,-.42],[.5,.42],[.34,.5],[-.5,.42]];s.moveTo(p[0][0]*w,p[0][1]*h);for(let i=1;i<p.length;i++)s.lineTo(p[i][0]*w,p[i][1]*h);s.closePath();const g=new T.ExtrudeGeometry(s,{depth:d,bevelEnabled:true,bevelThickness:Math.min(w,h)*q*.12,bevelSize:Math.min(w,h)*q*.12,bevelSegments:3,curveSegments:6});g.translate(0,0,-d/2);return add(name,g,k,pos,[0,0,0],slot)}
 function cz(name,r,l,k,pos,seg=32,slot=name){const g=new T.CylinderGeometry(r,r,l,seg,3);g.rotateX(Math.PI/2);return add(name,g,k,pos,[0,0,0],slot)}
 function cx(name,r,l,k,pos,seg=32,slot=name){const g=new T.CylinderGeometry(r,r,l,seg,3);g.rotateZ(Math.PI/2);return add(name,g,k,pos,[0,0,0],slot)}
 function curvedMag(){
@@ -23,8 +24,8 @@ function curvedMag(){
   return parts;
 }
 // 连续主轮廓：机匣、护木、枪管与枪托共用同一条中心轴，细节只服务于功能结构。
-box(label(),[.074,.094,.255],'metal',[0,.018,.015]);box(label(),[.067,.022,.235],'dark',[0,.073,.005]);box(label(),[.07,.086,.06],'dark',[0,.018,.17]);
-box(label(),[.082,.096,.245],'polymer',[0,.02,-.245]);box(label(),[.064,.014,.24],'black',[0,.076,-.245]);
+contour(label(),[.074,.094,.255],'metal',[0,.018,.015],'receiver');box(label(),[.067,.022,.235],'dark',[0,.073,.005]);contour(label(),[.07,.086,.06],'dark',[0,.018,.17],'receiver');
+contour(label(),[.082,.096,.245],'polymer',[0,.02,-.245],'handguard');box(label(),[.064,.014,.24],'black',[0,.076,-.245]);
 // 护木通风槽与导气系统
 for(let z=-.145;z>=-.35;z-=.041){box(label(),[.084,.006,.018],'dark',[0,.025,z]);box(label(),[.086,.008,.008],'edge',[0,.062,z+.012]);}
 // 机匣到护木的连续皮卡汀尼导轨，以及左右 M-LOK 导轨座
@@ -37,7 +38,7 @@ box(label(),[.058,.035,.048],'dark',[0,.078,-.30]);cz(label(),.006,.23,'metal',[
 curvedMag();box(label(),[.052,.032,.052],'metal',[0,-.024,.005]);
 box(label(),[.043,.026,.058],'dark',[0,-.048,.075]);box(label(),[.048,.132,.068],'polymer',[0,-.118,.09],[.1,0,0]);box(label(),[.051,.092,.007],'rubber',[0,-.123,.125],[.1,0,0]);const guard=new T.TorusGeometry(.025,.004,10,28,Math.PI*1.28);guard.rotateX(Math.PI/2);add(label(),guard,'dark',[0,-.046,.064],[0,0,Math.PI]);box(label(),[.008,.031,.009],'edge',[0,-.025,.065],[0,0,0]);
 // 镂空枪托骨架与尾垫：上下承力梁和侧板围出贯通的减重窗口
-cz(label(),.014,.16,'metal',[0,.028,.255],20);box(label(),[.066,.018,.22],'polymer',[0,.070,.385]);box(label(),[.066,.018,.20],'polymer',[0,-.012,.395]);
+cz(label(),.014,.16,'metal',[0,.028,.255],20);contour(label(),[.066,.080,.22],'polymer',[0,.028,.395],'stock');
 for(const x of[-.034,.034]){box(label(),[.008,.024,.19],'dark',[x,.060,.398],[.48,0,0]);box(label(),[.008,.024,.19],'dark',[x,-.002,.398],[-.48,0,0]);}
 box(label(),[.072,.092,.018],'rubber',[0,.029,.518]);box(label(),[.078,.044,.026],'dark',[0,.029,.195]);
 // 顶部导轨与机械瞄具
