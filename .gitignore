@@ -8,7 +8,15 @@
 练枪靶场/launcher.py
 练枪靶场/盐线练枪靶场.exe
 练枪靶场/盐线练枪靶场.spec
+练枪靶场/沿线练枪靶场.exe
+练枪靶场/*.exe
 *.pyc
+
+.env
+.env.*
+!.env.example
+.venv/
+venv/
 
 node_modules/
 编辑器/test-*.png
