@@ -1,31 +1,45 @@
 ﻿<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RPK-74 轻机枪</title><style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#15191d;color:#eee;font:14px sans-serif}iframe{width:100%;height:100%;border:0}header{position:fixed;left:12px;top:12px;padding:10px;background:#111c;border-radius:6px}h1,p{margin:0}h1{font-size:16px}p{margin-top:4px}</style></head>
 <body><iframe id="preview"></iframe><header><h1 id="asset-title"></h1><p id="status">加载中</p></header>
 <script id="along-asset" type="application/json">
-{"schema":"along.html-asset/1","id":"ai.rpk74_lmg","name":"RPK-74 轻机枪","version":"6.0.0","category":"武器","assetKind":"weapon","origin":"AI生成","units":"m","visualStyle":"realistic","styleReference":"沿线港区 PAC-9 写实风格 + RPK-74 参考图"}
+{"schema":"along.html-asset/1","id":"ai.rpk74_lmg","name":"RPK-74 轻机枪","version":"7.0.0","category":"武器","assetKind":"weapon","origin":"AI生成","units":"m","visualStyle":"realistic","styleReference":"沿线港区 PAC-9 写实风格 + RPK-74 参考图；弧形弹匣、镂空枪托、导轨护木"}
 </script>
 <script id="along-factory" type="text/plain">
 const T=ctx.THREE,root=new T.Group(),meshes=[];
 const palette={metal:['gunmetal',0x87939a,.34,.86],dark:['steel_dark',0x465158,.4,.84],black:['anodized_black',0x30383d,.32,.78],polymer:['polymer_black',0x4b5050,.58,.08],rubber:['rubber',0x2d3234,.78,.02],brass:['brass',0xc79b5a,.26,.9],edge:['steel_dark',0xaab3b6,.24,.88]};
 function mat(k){const p=palette[k]||palette.dark,m=ctx.original.material(p[0]).clone?ctx.original.material(p[0]).clone():ctx.original.material(p[0]);if(m.color)m.color.setHex(p[1]);if('roughness'in m)m.roughness=p[2];if('metalness'in m)m.metalness=p[3];return m;}
-const labels=["机匣","机匣盖","护木","导气箍","枪管","枪口装置","弹鼓","供弹座","握把","扳机护圈","枪托","尾垫","导轨","准星","照门","拉机柄","抛壳窗","加强筋","铆钉","护木槽"];let labelIndex=0;const label=()=>labels[labelIndex++%labels.length];
+const labels=["机匣","机匣盖","护木","导气箍","枪管","枪口装置","弧形弹匣","供弹座","握把","扳机护圈","镂空枪托","尾垫","导轨","准星","照门","拉机柄","抛壳窗","加强筋","铆钉","护木槽"];let labelIndex=0;const label=()=>labels[labelIndex++%labels.length];
 
 function add(name,g,k,pos,rot=[0,0,0],slot=name){const m=new T.Mesh(g,mat(k));m.name=name;m.position.set(...pos);m.rotation.set(...rot);m.userData.alongSlot=slot;m.castShadow=m.receiveShadow=true;root.add(m);meshes.push(m);return m;}
 function box(name,size,k,pos,rot=[0,0,0],slot=name){const [w,h,d]=size,b=Math.min(.006,Math.min(w,h,d)*.18),s=new T.Shape();s.moveTo(-w/2+b,-h/2);s.lineTo(w/2-b,-h/2);s.quadraticCurveTo(w/2,-h/2,w/2,-h/2+b);s.lineTo(w/2,h/2-b);s.quadraticCurveTo(w/2,h/2,w/2-b,h/2);s.lineTo(-w/2+b,h/2);s.quadraticCurveTo(-w/2,h/2,-w/2,h/2-b);s.lineTo(-w/2,-h/2+b);s.quadraticCurveTo(-w/2,-h/2,-w/2+b,-h/2);const g=new T.ExtrudeGeometry(s,{depth:Math.max(.001,d-2*b),bevelEnabled:true,bevelThickness:b,bevelSize:b,bevelSegments:2,curveSegments:4});g.translate(0,0,-d/2+b);return add(name,g,k,pos,rot,slot)}
 function cz(name,r,l,k,pos,seg=32,slot=name){const g=new T.CylinderGeometry(r,r,l,seg,3);g.rotateX(Math.PI/2);return add(name,g,k,pos,[0,0,0],slot)}
 function cx(name,r,l,k,pos,seg=32,slot=name){const g=new T.CylinderGeometry(r,r,l,seg,3);g.rotateZ(Math.PI/2);return add(name,g,k,pos,[0,0,0],slot)}
+function curvedMag(){
+  // RPK-74 uses a tapered, forward-curving 5.45 mm box magazine, never a drum.
+  const parts=[];
+  const profile=[[-.050,-.055,-.10],[-.082,-.075,-.14],[-.116,-.094,-.18],[-.150,-.108,-.22],[-.181,-.112,-.27],[-.208,-.102,-.31]];
+  profile.forEach(([y,z,a],i)=>{const m=box("弧形弹匣分段"+i,[.060,.045,.070],i<2?'dark':'polymer',[0,y,z],[a,0,0],"弧形弹匣");parts.push(m);});
+  for(let i=0;i<6;i++)box("弹匣加强筋"+i,[.062,.006,.010],"edge",[0,-.070-i*.026,-.15-i*.032],[0,0,0],"弹匣加强筋");
+  box("弹匣卡口",[.050,.020,.030],"metal",[0,-.040,-.06],[0,0,0],"弹匣卡口");
+  return parts;
+}
 // 连续主轮廓：机匣、护木、枪管与枪托共用同一条中心轴，细节只服务于功能结构。
 box(label(),[.074,.094,.255],'metal',[0,.018,.015]);box(label(),[.067,.022,.235],'dark',[0,.073,.005]);box(label(),[.07,.086,.06],'dark',[0,.018,.17]);
 box(label(),[.082,.096,.245],'polymer',[0,.02,-.245]);box(label(),[.064,.014,.24],'black',[0,.076,-.245]);
 // 护木通风槽与导气系统
 for(let z=-.145;z>=-.35;z-=.041){box(label(),[.084,.006,.018],'dark',[0,.025,z]);box(label(),[.086,.008,.008],'edge',[0,.062,z+.012]);}
+// 机匣到护木的连续皮卡汀尼导轨，以及左右 M-LOK 导轨座
+box(label(),[.026,.012,.245],'black',[0,.089,-.245]);
+for(let z=-.145;z>=-.345;z-=.025)box(label(),[.032,.006,.008],'edge',[0,.100,z]);
+for(const x of[-.046,.046]){box(label(),[.008,.028,.205],'dark',[x,.038,-.245]);for(let z=-.16;z>=-.33;z-=.043)box(label(),[.006,.009,.020],'black',[x,.041,z]);}
 box(label(),[.054,.056,.068],'dark',[0,.04,-.142]);cz(label(),.0145,.61,'metal',[0,.048,-.455],36);cz(label(),.021,.075,'dark',[0,.048,-.798],28);cz(label(),.024,.012,'edge',[0,.048,-.835],28);
 box(label(),[.058,.035,.048],'dark',[0,.078,-.30]);cz(label(),.006,.23,'metal',[0,.092,-.27],18);box(label(),[.036,.045,.028],'dark',[0,.102,-.40]);box(label(),[.007,.03,.009],'edge',[0,.132,-.40]);
-// 弹鼓、握把与扳机护圈
-cx(label(),.078,.058,'metal',[0,-.078,-.002],36);cx(label(),.061,.064,'dark',[0,-.078,-.002],36);cx(label(),.019,.07,'brass',[0,-.078,-.002],24);box(label(),[.042,.03,.065],'dark',[0,-.034,-.005]);
-for(const x of[-.032,.032])for(const z of[-.045,.04])cx(label(),.003,.004,'brass',[x,-.078,z],12);
+// 弧形弹匣、供弹座、握把与扳机护圈
+curvedMag();box(label(),[.052,.032,.052],'metal',[0,-.024,.005]);
 box(label(),[.043,.026,.058],'dark',[0,-.048,.075]);box(label(),[.048,.132,.068],'polymer',[0,-.118,.09],[.1,0,0]);box(label(),[.051,.092,.007],'rubber',[0,-.123,.125],[.1,0,0]);const guard=new T.TorusGeometry(.025,.004,10,28,Math.PI*1.28);guard.rotateX(Math.PI/2);add(label(),guard,'dark',[0,-.046,.064],[0,0,Math.PI]);box(label(),[.008,.031,.009],'edge',[0,-.025,.065],[0,0,0]);
-// 枪托骨架与尾垫
-cz(label(),.014,.25,'metal',[0,.028,.29],20);box(label(),[.066,.08,.22],'polymer',[0,.028,.40]);box(label(),[.006,.044,.16],'dark',[.035,.028,.40]);box(label(),[.07,.086,.019],'rubber',[0,.028,.518]);box(label(),[.073,.038,.045],'dark',[0,.028,.18]);
+// 镂空枪托骨架与尾垫：上下承力梁和侧板围出贯通的减重窗口
+cz(label(),.014,.16,'metal',[0,.028,.255],20);box(label(),[.066,.018,.22],'polymer',[0,.070,.385]);box(label(),[.066,.018,.20],'polymer',[0,-.012,.395]);
+for(const x of[-.034,.034]){box(label(),[.008,.024,.19],'dark',[x,.060,.398],[.48,0,0]);box(label(),[.008,.024,.19],'dark',[x,-.002,.398],[-.48,0,0]);}
+box(label(),[.072,.092,.018],'rubber',[0,.029,.518]);box(label(),[.078,.044,.026],'dark',[0,.029,.195]);
 // 顶部导轨与机械瞄具
 box(label(),[.031,.014,.23],'black',[0,.088,.005]);for(let z=-.10;z<=.105;z+=.025)box(label(),[.036,.009,.006],'edge',[0,.099,z]);box(label(),[.038,.036,.026],'dark',[0,.115,.105]);box(label(),[.046,.02,.065],'dark',[0,.108,.02]);cz(label(),.023,.105,'black',[0,.136,.02],28);for(const z of[-.038,.038]){const ring=new T.TorusGeometry(.025,.004,10,28);ring.rotateY(Math.PI/2);add(label(),ring,'edge',[0,.136,.02+z]);}cz(label(),.019,.006,'black',[0,.136,-.038],24);cz(label(),.019,.006,'black',[0,.136,.078],24);
 // 机匣侧面功能结构
