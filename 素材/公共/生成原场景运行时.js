@@ -143,8 +143,10 @@ async function alongHandleMessage(data) {
         if(box.isEmpty()) throw Error('素材没有可见几何');
         const size=box.getSize(new T.Vector3()),center=box.getCenter(new T.Vector3());
         scene.add(object);
-        const distance=Math.max(size.x,size.y,size.z,1)*1.6;
-        window.__setShot({cam:[center.x+distance,center.y+distance*.65,center.z+distance,center.x,center.y,center.z].join(','),fov:45});
+        // 素材预览必须自动取景：用包围盒而不是固定场景镜头，否则 1 米级武器会缩成远处小方块。
+        const radius=Math.max(size.x,size.y,size.z,0.05);
+        const distance=Math.max(radius*1.18,0.18);
+        window.__setShot({cam:[center.x+distance*.92,center.y+distance*.34,center.z+distance*.92,center.x,center.y,center.z].join(','),fov:38});
         if(data.type==='thumbnail'){scene.background=new T.Color(0x253037);scene.fog=null;if(window.__G.render.sky)window.__G.render.sky.visible=true;await new Promise(resolve=>setTimeout(resolve,350));window.__G.render.renderer.render(scene,window.__G.camera);alongReply('thumbnail-ready',{id:data.id,url:window.__G.render.renderer.domElement.toDataURL('image/png')});}
         alongReply('preview-ready',{id:data.id,size:[size.x,size.y,size.z]});
       } else {
