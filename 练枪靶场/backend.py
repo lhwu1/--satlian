@@ -9,6 +9,8 @@ class Handler(SimpleHTTPRequestHandler):
     def __init__(self,*args,**kwargs): super().__init__(*args,directory=str(ROOT),**kwargs)
     def do_GET(self):
         if self.path == '/api/health': return self._json(200, {'ok': True, 'service': 'range'})
+        if self.path in ('/', '/desktop'):
+            self.path = '/unified.html'
         return super().do_GET()
     def do_POST(self):
         if self.path == '/api/health':

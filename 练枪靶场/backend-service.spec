@@ -4,7 +4,7 @@ from pathlib import Path
 root = Path.cwd()
 datas = [(str(root / name), '.') for name in (
     'index.html', 'style.css', 'app.js', 'range-loader.js',
-    'range-targets.js', 'training-coach.js', 'saltline-original.html',
+    'range-targets.js', 'training-coach.js', 'saltline-original.html', 'unified.html',
     'raw_mouse.py', '使用说明.md'
 )]
 a = Analysis(['backend.py'], pathex=[str(root)], binaries=[], datas=datas,
